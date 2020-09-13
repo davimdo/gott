@@ -9,7 +9,7 @@ implement it for DASH and HLS.
 - [X] Player interface
 - [X] Smooth VOD implementation
 - [X] CMD to simmulate VOD fragment requests in a normal playout
-- [] DASH VOD implementation
-- [] HLS VOD implementation
-- [] Live implementations
-- [] Improved CMD
+- [ ] DASH VOD implementation
+- [ ] HLS VOD implementation
+- [ ] Live implementations
+- [ ] Improved CMD
