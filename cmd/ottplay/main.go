@@ -29,16 +29,17 @@ import (
 )
 
 // USAGE is the CMD help
-const USAGE string = `usage: %s MANIFEST POSITION [INTERVAL]
+const USAGE string = `usage: %s MANIFEST POSITION INTERVAL
 
 	MANIFEST   OTT Manifest URL (for now Smooth)
 	POSITION   Position in which start \"playing\"
-	INTERVAL   Time interval in seconds to repeat the same manifest playout
+	INTERVAL   Time interval in millisec to repeat the same manifest playout
 `
 
 func main() {
 	if len(os.Args) != 4 {
-		log.Fatalf(USAGE, os.Args[0])
+		fmt.Printf(USAGE, os.Args[0])
+		os.Exit(-1)
 	}
 
 	position, err := strconv.Atoi(os.Args[2])
@@ -54,7 +55,7 @@ func main() {
 		go func(url string, position int) {
 			launchPlayer(url, position)
 		}(os.Args[1], position)
-		time.Sleep(time.Duration(interval) * time.Second)
+		time.Sleep(time.Duration(interval) * time.Millisecond)
 	}
 }
 

@@ -13,9 +13,9 @@ Default Streams:
 ## Usage
 
 ```
-usage: %s MANIFEST POSITION [INTERVAL]
+usage: %s MANIFEST POSITION INTERVAL
 
 	MANIFEST   OTT Manifest URL (for now Smooth)
 	POSITION   Position in which start \"playing\"
-	INTERVAL   Time interval in seconds to repeat the same manifest playout
+	INTERVAL   Time interval in milliseconds to repeat the same manifest playout
 ```
