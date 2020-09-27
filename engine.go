@@ -21,14 +21,6 @@ type Engine interface {
 	// Streams can not be loaded if player state is StateNotLoaded.
 	Streams() []Stream
 
-	// Streams returns default streams. What means "default" depends on
-	// player implementation.
-	// Streams can not be loaded if player state is StateNotLoaded.
-	DefaultStreams() []Stream
-
 	// Context returns player context.
 	Context() context.Context
-
-	// WithContext sets the context to the player
-	WithContext(ctx context.Context)
 }
