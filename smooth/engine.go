@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/davimdo/gott"
-	"github.com/davimdo/gott/pkg/ism"
+	"github.com/davimdo/gott/smooth/ism"
 )
 
 // Engine implements gottPlayer interface for Microsoft Smooth Streaming
