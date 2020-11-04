@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/davimdo/gott"
+	"github.com/davimdo/gott/dash"
 	"github.com/davimdo/gott/smooth"
 )
 
@@ -57,6 +58,9 @@ func loadEngine(manifestURL string) (gott.Engine, error) {
 	if manifestIsSmooth(manifest) {
 		return loadSmoothEngine(u, manifest)
 	}
+	if manifestIsDash(manifest) {
+		return loadDashEngine(u, manifest)
+	}
 	return nil, fmt.Errorf("Unknown Engine for manifest fetch from: %s", manifestURL)
 }
 
@@ -79,17 +83,36 @@ func manifestIsSmooth(manifest []byte) bool {
 	return bytes.Contains(manifest, []byte("<SmoothStreamingMedia"))
 }
 
+func loadDashEngine(u *url.URL, manifest []byte) (gott.Engine, error) {
+	engine, err := dash.NewEngine()
+	if err != nil {
+		return nil, err
+	}
+	err = engine.LoadManifest(u, manifest)
+	if err != nil {
+		return nil, err
+	}
+	return gott.Engine(engine), err
+}
+
+func manifestIsDash(manifest []byte) bool {
+	if manifest == nil {
+		return false
+	}
+	return bytes.Contains(manifest, []byte("<MPD"))
+}
+
 func playWithContext(ctx context.Context, streams []gott.Stream) error {
 	var wg sync.WaitGroup
 	wg.Add(len(streams))
 	for _, stream := range streams {
 		go func(stream gott.Stream) {
 			j := 0
-			for chunkResp := range gott.PlayStreamWithContext(ctx, stream) {
-				fmt.Printf("%d - %5s - %s\n", j, stream.StreamType(), chunkResp.Request.URL)
+			for resp := range gott.PlayStreamWithContext(ctx, stream, true) {
+				fmt.Printf("%d - %5s - [GET %d] %s %d\n", j, stream.StreamType(), resp.StatusCode, resp.Request.URL, resp.ContentLength)
 				j++
-				io.Copy(ioutil.Discard, chunkResp.Body)
-				chunkResp.Body.Close()
+				io.Copy(ioutil.Discard, resp.Body)
+				resp.Body.Close()
 			}
 			wg.Done()
 		}(stream)

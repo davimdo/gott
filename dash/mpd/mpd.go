@@ -21,7 +21,8 @@ type MPD struct {
 	SCTE35                     string   `xml:"scte35,attr,omitempty"`
 	XSISchemaLocation          string   `xml:"schemaLocation,attr"`
 	ID                         string   `xml:"id,attr"`
-	Period                     Period   `xml:"Period,omitempty"`
+
+	Periods []Period `xml:"Period,omitempty"`
 }
 
 func Unmarshal(ism []byte) (*MPD, error) {
@@ -39,44 +40,51 @@ func (ism *MPD) Marshal() ([]byte, error) {
 
 // Period represents XSD's PeriodType.
 type Period struct {
-	Start          string          `xml:"start,attr"`
-	ID             string          `xml:"id,attr"`
-	Duration       string          `xml:"duration,attr"`
-	AdaptationSets []AdaptationSet `xml:"AdaptationSet,omitempty"`
-}
+	Start    string `xml:"start,attr"`
+	ID       string `xml:"id,attr"`
+	Duration string `xml:"duration,attr"`
 
-// Period represents XSD's PeriodType.
-type periodMarshal struct {
-	Start          string          `xml:"start,attr"`
-	ID             string          `xml:"id,attr"`
-	Duration       string          `xml:"duration,attr"`
 	AdaptationSets []AdaptationSet `xml:"AdaptationSet,omitempty"`
 }
 
 // AdaptationSet represents XSD's AdaptationSetType.
 type AdaptationSet struct {
-	MimeType                string           `xml:"mimeType,attr"`
-	SegmentAlignment        bool             `xml:"segmentAlignment,attr"`
-	StartWithSAP            uint64           `xml:"startWithSAP,attr"`
-	BitstreamSwitching      bool             `xml:"bitstreamSwitching,attr"`
-	SubsegmentAlignment     bool             `xml:"subsegmentAlignment,attr"`
-	SubsegmentStartsWithSAP uint64           `xml:"subsegmentStartsWithSAP,attr"`
-	Lang                    string           `xml:"lang,attr"`
-	Codecs                  string           `xml:"codecs,attr"`
-	Representations         []Representation `xml:"Representation,omitempty"`
-	SegmentTemplate         SegmentTemplate  `xml:"SegmentTemplate,omitempty"`
+	MimeType                string `xml:"mimeType,attr"`
+	SegmentAlignment        bool   `xml:"segmentAlignment,attr"`
+	StartWithSAP            uint64 `xml:"startWithSAP,attr"`
+	BitstreamSwitching      bool   `xml:"bitstreamSwitching,attr"`
+	SubsegmentAlignment     bool   `xml:"subsegmentAlignment,attr"`
+	SubsegmentStartsWithSAP uint64 `xml:"subsegmentStartsWithSAP,attr"`
+	Lang                    string `xml:"lang,attr"`
+	Codecs                  string `xml:"codecs,attr"`
+
+	Role              *Role              `xml:"Role,omitempty"`
+	EssentialProperty *EssentialProperty `xml:"EssentialProperty,omitempty"`
+	Representations   []Representation   `xml:"Representation,omitempty"`
+	SegmentTemplate   SegmentTemplate    `xml:"SegmentTemplate,omitempty"`
+}
+
+type Role struct {
+	SchemeIDURI string `xml:"schemeIdUri,attr"`
+	Value       string `xml:"value,attr"`
+}
+
+type EssentialProperty struct {
+	SchemeIDURI string `xml:"schemeIdUri,attr"`
+	Value       string `xml:"value,attr"`
 }
 
 // Representation represents XSD's RepresentationType.
 type Representation struct {
-	ID                 string       `xml:"id,attr"`
-	Width              uint64       `xml:"width,attr"`
-	Height             uint64       `xml:"height,attr"`
-	SAR                string       `xml:"sar,attr"`
-	FrameRate          string       `xml:"frameRate,attr"`
-	Bandwidth          uint64       `xml:"bandwidth,attr"`
-	AudioSamplingRate  string       `xml:"audioSamplingRate,attr"`
-	Codecs             string       `xml:"codecs,attr"`
+	ID                string `xml:"id,attr"`
+	Width             uint64 `xml:"width,attr"`
+	Height            uint64 `xml:"height,attr"`
+	SAR               string `xml:"sar,attr"`
+	FrameRate         string `xml:"frameRate,attr"`
+	Bandwidth         uint64 `xml:"bandwidth,attr"`
+	AudioSamplingRate string `xml:"audioSamplingRate,attr"`
+	Codecs            string `xml:"codecs,attr"`
+
 	ContentProtections []Descriptor `xml:"ContentProtection,omitempty"`
 }
 
@@ -89,14 +97,6 @@ type Descriptor struct {
 	Pssh           Pssh   `xml:"pssh"`
 }
 
-type descriptorMarshal struct {
-	SchemeIDURI    string `xml:"schemeIdUri,attr"`
-	Value          string `xml:"value,attr,omitempty"`
-	CencDefaultKID string `xml:"cenc:default_KID,attr,omitempty"`
-	Cenc           string `xml:"xmlns:cenc,attr,omitempty"`
-	Pssh           Pssh   `xml:"cenc:pssh"`
-}
-
 // Pssh represents XSD's CencPsshType .
 type Pssh struct {
 	Cenc  string `xml:"cenc,attr"`
@@ -105,12 +105,13 @@ type Pssh struct {
 
 // SegmentTemplate represents XSD's SegmentTemplateType.
 type SegmentTemplate struct {
-	Timescale              uint64            `xml:"timescale,attr"`
-	Media                  string            `xml:"media,attr"`
-	Initialization         string            `xml:"initialization,attr"`
-	StartNumber            uint64            `xml:"startNumber,attr"`
-	PresentationTimeOffset uint64            `xml:"presentationTimeOffset,attr"`
-	SegmentTimeline        []SegmentTimeline `xml:"SegmentTimeline,omitempty"`
+	Timescale              uint64 `xml:"timescale,attr"`
+	Media                  string `xml:"media,attr"`
+	Initialization         string `xml:"initialization,attr"`
+	StartNumber            uint64 `xml:"startNumber,attr"`
+	PresentationTimeOffset uint64 `xml:"presentationTimeOffset,attr"`
+
+	SegmentTimeline SegmentTimeline `xml:"SegmentTimeline,omitempty"`
 }
 
 // SegmentTimeline represents XSD's SegmentTimelineType
