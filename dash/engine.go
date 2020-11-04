@@ -1,7 +1,6 @@
 package dash
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -17,7 +16,6 @@ import (
 // protocol.
 type Engine struct {
 	manifestURL *url.URL
-	ctx         context.Context
 	http        *http.Client
 	streams     []Stream
 }
@@ -25,19 +23,8 @@ type Engine struct {
 // NewEngine creates a new PLayer instance.
 func NewEngine() (*Engine, error) {
 	return &Engine{
-		ctx:  context.Background(),
 		http: http.DefaultClient,
 	}, nil
-}
-
-// NewEngineWithContext creates a new instance of Player with the given context.
-func NewEngineWithContext(ctx context.Context, manifestURL string) (*Engine, error) {
-	p, err := NewEngine()
-	if err != nil {
-		return nil, err
-	}
-	p.ctx = ctx
-	return p, nil
 }
 
 func (p *Engine) LoadURL(manifest *url.URL) error {
@@ -68,15 +55,6 @@ func (p *Engine) Streams() []gott.Stream {
 		streams[i] = gott.Stream(&p.streams[i])
 	}
 	return streams
-}
-
-// Context returns player context. Player have always a context defined, so
-// Context ensure none nil return.
-func (p *Engine) Context() context.Context {
-	if p.ctx == nil {
-		return context.Background()
-	}
-	return p.ctx
 }
 
 func (p *Engine) loadStreams(m *mpd.MPD) error {

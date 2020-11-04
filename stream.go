@@ -1,7 +1,6 @@
 package gott
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"time"
@@ -46,10 +45,6 @@ type Chunk struct {
 }
 
 func PlayStream(stream Stream, realTime bool) <-chan *http.Response {
-	return PlayStreamWithContext(context.Background(), stream, realTime)
-}
-
-func PlayStreamWithContext(ctx context.Context, stream Stream, realTime bool) <-chan *http.Response {
 	httpClient := stream.HttpClient()
 	chuncks := stream.Chunks()
 

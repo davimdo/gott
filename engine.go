@@ -1,7 +1,6 @@
 package gott
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -18,9 +17,6 @@ type Engine interface {
 	// Streams returns all available streams.
 	// Streams can not be loaded if player state is StateNotLoaded.
 	Streams() []Stream
-
-	// Context returns player context.
-	Context() context.Context
 }
 
 // Fetch request the url using the http.Client provided, returning a byte

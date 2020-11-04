@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -38,7 +37,7 @@ func main() {
 	}
 
 	defaultStreams := defaultStreams(engine.Streams())
-	err = playWithContext(engine.Context(), defaultStreams)
+	err = play(defaultStreams)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
@@ -102,18 +101,19 @@ func manifestIsDash(manifest []byte) bool {
 	return bytes.Contains(manifest, []byte("<MPD"))
 }
 
-func playWithContext(ctx context.Context, streams []gott.Stream) error {
+func play(streams []gott.Stream) error {
 	var wg sync.WaitGroup
 	wg.Add(len(streams))
 	for _, stream := range streams {
 		go func(stream gott.Stream) {
 			j := 0
-			for resp := range gott.PlayStreamWithContext(ctx, stream, true) {
+			for resp := range gott.PlayStream(stream, false) {
 				fmt.Printf("%d - %5s - [GET %d] %s %d\n", j, stream.StreamType(), resp.StatusCode, resp.Request.URL, resp.ContentLength)
 				j++
 				io.Copy(ioutil.Discard, resp.Body)
 				resp.Body.Close()
 			}
+			fmt.Println(stream.StreamType())
 			wg.Done()
 		}(stream)
 	}
