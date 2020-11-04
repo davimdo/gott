@@ -2,7 +2,6 @@ package smooth
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -23,21 +22,16 @@ type Engine struct {
 }
 
 // NewEngine creates a new PLayer instance.
-func NewEngine(manifestURL string) (*Engine, error) {
-	u, err := url.Parse(manifestURL)
-	if err != nil {
-		return nil, err
-	}
+func NewEngine() (*Engine, error) {
 	return &Engine{
-		ctx:         context.Background(),
-		manifestURL: u,
-		http:        http.DefaultClient,
+		ctx:  context.Background(),
+		http: http.DefaultClient,
 	}, nil
 }
 
 // NewEngineWithContext creates a new instance of Player with the given context.
 func NewEngineWithContext(ctx context.Context, manifestURL string) (*Engine, error) {
-	p, err := NewEngine(manifestURL)
+	p, err := NewEngine()
 	if err != nil {
 		return nil, err
 	}
@@ -45,13 +39,21 @@ func NewEngineWithContext(ctx context.Context, manifestURL string) (*Engine, err
 	return p, nil
 }
 
-// Load obtains all the streams available in the manifest.
-func (p *Engine) Load() error {
-	manifest, err := p.getManifest()
+func (p *Engine) LoadURL(manifest *url.URL) error {
+	m, err := gott.Fetch(p.http, manifest)
 	if err != nil {
 		return err
 	}
-	err = p.loadStreams(manifest)
+	return p.LoadManifest(manifest, m)
+}
+
+func (p *Engine) LoadManifest(url *url.URL, manifest []byte) error {
+	p.manifestURL = url
+	ism, err := ism.Unmarshal(manifest)
+	if err != nil {
+		return err
+	}
+	err = p.loadStreams(ism)
 	if err != nil {
 		return err
 	}
@@ -74,19 +76,6 @@ func (p *Engine) Context() context.Context {
 		return context.Background()
 	}
 	return p.ctx
-}
-
-func (p *Engine) getManifest() (*ism.SmoothStreamingMedia, error) {
-	resp, err := p.http.Get(p.manifestURL.String())
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	manifest, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return ism.Unmarshal(manifest)
 }
 
 func (p *Engine) loadStreams(m *ism.SmoothStreamingMedia) error {

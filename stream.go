@@ -1,12 +1,9 @@
 package gott
 
 import (
-	"fmt"
-	"io"
-	"io/ioutil"
+	"context"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 )
 
@@ -26,6 +23,21 @@ const (
 	StreamTypeText
 )
 
+func (st StreamType) String() string {
+	switch st {
+	case StreamTypeVideo:
+		return "video"
+	case StreamTypeTrickmode:
+		return "trickmode"
+	case StreamTypeAudio:
+		return "audio"
+	case StreamTypeText:
+		return "text"
+	default:
+		return "unknown"
+	}
+}
+
 type Chunk struct {
 	Index    int
 	URL      *url.URL
@@ -34,6 +46,10 @@ type Chunk struct {
 }
 
 func PlayStream(stream Stream) <-chan *http.Response {
+	return PlayStreamWithContext(context.Background(), stream)
+}
+
+func PlayStreamWithContext(ctx context.Context, stream Stream) <-chan *http.Response {
 	httpClient := stream.HttpClient()
 	chuncks := stream.Chunks()
 
@@ -55,31 +71,4 @@ func PlayStream(stream Stream) <-chan *http.Response {
 		close(c)
 	}(c)
 	return c
-}
-
-// Play call PlayStream concurrently for each one of the stream passed by
-// argument. Play stop the "playout" upon an error on any of the Streams
-// If an error is raised, all concurrent playout are canceled.
-//
-// Play can only be called if PlayerState is PlayerStateLoaded. And when all
-// streams are done, or an error is raised PlayerState is set to PlayerLoaded.
-//
-// streams must not be null.
-func Play(streams []Stream) error {
-	var wg sync.WaitGroup
-	wg.Add(len(streams))
-	for i, stream := range streams {
-		go func(stream Stream, i int) {
-			j := 0
-			for chunkResp := range PlayStream(stream) {
-				fmt.Printf("%d - %d - %s\n", j, i, chunkResp.Request.URL)
-				j++
-				io.Copy(ioutil.Discard, chunkResp.Body)
-				chunkResp.Body.Close()
-			}
-			wg.Done()
-		}(stream, i)
-	}
-	wg.Wait()
-	return nil
 }
