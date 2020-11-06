@@ -2,13 +2,17 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -18,40 +22,105 @@ import (
 )
 
 var (
-	manifestURL string
-	realTime    bool
-	position    int
+	playoutFile string
+	verbose     bool
+	interval    int
 )
 
 func init() {
-	flag.StringVar(&manifestURL, "input", "", "Manifest URL")
-	flag.BoolVar(&realTime, "real-time", true, "Simulate real time player")
-	flag.IntVar(&position, "position", 0, "Index chunk position to start playout.")
+	flag.StringVar(&playoutFile, "input", "", "playout url list file")
+	flag.BoolVar(&verbose, "verbose", false, "verbose log")
+	flag.IntVar(&interval, "interval", 1000, "Interval in ms to read a new playout from input file")
 
 	client := http.DefaultClient
 	client.Timeout = 10 * time.Second
+	client.Transport = &http.Transport{
+		Proxy: nil,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          4096,
+		MaxIdleConnsPerHost:   1024,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 }
 
 func main() {
 	flag.Parse()
-	if manifestURL == "" {
-		flag.Usage()
-		fmt.Printf("Err: manifest URL not specified.\n")
-		os.Exit(-1)
-	}
+	count := 1
+	var wg sync.WaitGroup
+	for p := range getPlayoutFromFile(playoutFile) {
+		wg.Add(1)
+		go func(p playout, count int) {
+			for {
+				fmt.Printf("%d - Stating playout: %#v\n", count, p)
+				engine, err := loadEngine(p.URL)
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
 
-	engine, err := loadEngine(manifestURL)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+				defaultStreams := defaultStreams(engine.Streams())
+				err = play(defaultStreams, p.Position)
+				if err != nil {
+					fmt.Println(err)
+					break
+				}
+			}
+			wg.Done()
+		}(p, count)
+		count++
+		time.Sleep(time.Duration(interval) * time.Millisecond)
 	}
+	wg.Wait()
+}
 
-	defaultStreams := defaultStreams(engine.Streams())
-	err = play(defaultStreams)
+type playout struct {
+	URL      string
+	Position int
+}
+
+func getPlayoutFromFile(path string) <-chan playout {
+	c := make(chan playout, 1)
+	file, err := os.Open(path)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
+		panic(err)
 	}
+	go func(file *os.File) {
+		defer file.Close()
+		r := csv.NewReader(file)
+		r.Comma = ';'
+		r.Comment = '#'
+		for {
+			record, err := r.Read()
+			if err == io.EOF {
+				close(c)
+				break
+			}
+			if err != nil {
+				close(c)
+				log.Fatal(err)
+				break
+			}
+			position, err := strconv.Atoi(record[1])
+			if err != nil {
+				close(c)
+				log.Fatal(err)
+				break
+			}
+			p := playout{
+				URL:      record[0],
+				Position: position,
+			}
+			c <- p
+		}
+	}(file)
+	return c
 }
 
 func loadEngine(manifestURL string) (gott.Engine, error) {
@@ -111,14 +180,16 @@ func manifestIsDash(manifest []byte) bool {
 	return bytes.Contains(manifest, []byte("<MPD"))
 }
 
-func play(streams []gott.Stream) error {
+func play(streams []gott.Stream, position int) error {
 	var wg sync.WaitGroup
 	wg.Add(len(streams))
 	for _, stream := range streams {
 		go func(stream gott.Stream) {
 			j := 0
-			for resp := range gott.PlayStream(stream, position, realTime) {
-				fmt.Printf("%d - %5s - [GET %d] %s %d\n", j+position, stream.StreamType(), resp.StatusCode, resp.Request.URL, resp.ContentLength)
+			for resp := range gott.PlayStream(stream, position, true) {
+				if resp.StatusCode != 200 || verbose {
+					fmt.Printf("%d - %5s - [GET %d] %s %d\n", j+position, stream.StreamType(), resp.StatusCode, resp.Request.URL, resp.ContentLength)
+				}
 				j++
 				io.Copy(ioutil.Discard, resp.Body)
 				resp.Body.Close()

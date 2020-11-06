@@ -1,6 +1,7 @@
 package gott
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -44,7 +45,7 @@ type Chunk struct {
 	Duration time.Duration
 }
 
-func PlayStream(stream Stream, realTime bool) <-chan *http.Response {
+func PlayStream(stream Stream, position int, realTime bool) <-chan *http.Response {
 	httpClient := stream.HttpClient()
 	chuncks := stream.Chunks()
 
@@ -53,8 +54,12 @@ func PlayStream(stream Stream, realTime bool) <-chan *http.Response {
 		firstChunkTime := time.Now()
 		acumulateDuration := time.Duration(0)
 		for _, chunk := range chuncks {
+			if chunk.Index < position {
+				continue
+			}
 			resp, err := httpClient.Get(chunk.URL.String())
 			if err != nil {
+				fmt.Println(err)
 				close(c)
 				return
 			}

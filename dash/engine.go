@@ -57,6 +57,10 @@ func (p *Engine) Streams() []gott.Stream {
 	return streams
 }
 
+func (p *Engine) HttpClient() *http.Client {
+	return p.http
+}
+
 func (p *Engine) loadStreams(m *mpd.MPD) error {
 	period := m.Periods[0]
 	for _, as := range period.AdaptationSets {
